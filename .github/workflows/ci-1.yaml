@@ -30,9 +30,9 @@ jobs:
   test:
     needs: lint-typecheck
     runs-on: ${{ matrix.os }}
-    fail-fast: false
     continue-on-error: ${{ matrix.experimental == true }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         node: [20, 22]
