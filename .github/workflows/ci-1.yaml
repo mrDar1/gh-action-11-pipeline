@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      fail_mode:
+        description: "Force a test failure (sets FAIL_MODE=1)"
+        type: boolean
+        default: false
+      flaky_mode:
+        description: "Enable flaky test (~50% failure rate, sets FLAKY_MODE=1)"
+        type: boolean
+        default: false
+
+jobs:
+  lint-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+    #   - run: npm ci
+    # try lint and typecheck before installing dependencies to fail faster on lint/type errors
+      - run: npm run lint
+      - run: npm run typecheck
+
+  test:
+    needs: lint-typecheck
+    runs-on: ${{ matrix.os }}
+    fail-fast: false
+    continue-on-error: ${{ matrix.experimental == true }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [20, 22]
+        include:
+          - os: ubuntu-latest
+            node: 18
+            experimental: true
+    outputs:
+      result: ${{ steps.run-tests.outcome }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+
+      - id: run-tests
+        name: Run tests
+        run: npm test
+        env:
+          FAIL_MODE: ${{ inputs.fail_mode == true && '1' || '' }}
+          FLAKY_MODE: ${{ inputs.flaky_mode == true && '1' || '' }}
+
+      - name: On success
+        if: success()
+        run: echo "Tests passed on node ${{ matrix.node }} / ${{ matrix.os }}"
+
+      - name: On failure - collect diagnostics
+        if: failure()
+        run: |
+          echo "Tests FAILED on node ${{ matrix.node }} / ${{ matrix.os }}"
+          npm list --depth=0
+
+      - name: Cleanup (always)
+        if: always()
+        run: echo "Cleanup step — always runs regardless of outcome"
+
+  report:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pass gate
+        if: needs.test.result == 'success'
+        run: echo "All test matrix legs passed."
+
+      - name: Fail gate
+        if: needs.test.result != 'success'
+        run: |
+          echo "Test matrix result: ${{ needs.test.result }}"
+          exit 1
