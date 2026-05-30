@@ -22,8 +22,8 @@ jobs:
         with:
           node-version: 20
           cache: npm
-    #   - run: npm ci
-    # try lint and typecheck before installing dependencies to fail faster on lint/type errors
+      - run: npm ci
+    # if not use it - fail. as need node-modules.
       - run: npm run lint
       - run: npm run typecheck
 
