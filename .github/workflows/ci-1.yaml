@@ -13,6 +13,9 @@ on:
         type: boolean
         default: false
 
+
+
+        
 jobs:
   lint-typecheck:
     runs-on: ubuntu-latest
@@ -22,10 +25,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
-    # if not use it - fail. as need node-modules.
+      - run: npm ci     # if not use it - fail. as need node-modules.
       - run: npm run lint
       - run: npm run typecheck
+
+
+
 
   test:
     needs: lint-typecheck
@@ -69,7 +74,10 @@ jobs:
 
       - name: Cleanup (always)
         if: always()
-        run: echo "Cleanup step — always runs regardless of outcome"
+        run: echo "Cleanup step — always runs regardless of outcome - here, only print. does nothing"
+
+
+
 
   report:
     needs: test
